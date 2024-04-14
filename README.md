@@ -1,4 +1,4 @@
-# Physically-based Simulation 2023 - Course Exercises
+# Physically-based Simulation 2024 - Course Exercises
 
 ## Installation
 
@@ -32,17 +32,17 @@ You can download *Visual Studio 2022 Community* for free from [here](https://vis
 
 
 ### Cloning the Exercise Repository
-Before you are able to clone your private exercise repository, you need to have an active [gitlab@FAU](https://gitlab.cs.fau.de/) account. Then you can [fork](https://docs.gitlab.com/ee/user/project/repository/forking_workflow.html) this project to create your own private online repository.
+Before you are able to clone your private exercise repository, you need to have an active [gitlab@FAU](https://gitlab.rrze.fau.de/) account. Then you can [fork](https://docs.gitlab.com/ee/user/project/repository/forking_workflow.html) this project to create your own private online repository.
 
 In the next step, you need to clone it to your local hard drive:
 ```
-git clone git@gitlab.cs.fau.de:'Your_Git_Username'/physsim-ws23.git
+git clone git@gitlab.rrze.fau.de:'Your_Git_Username'/physsim-ss24.git
 ```
 'Your_Git_Username' needs to be replaced accordingly. This can take a moment.
 
 Next, cd into the newly created folder, and run the following commands inside the relevant subfolder to setup the build folder:
 ```
-cd physsim-ws23; mkdir build
+cd physsim-ss24; mkdir build
 cd build
 cmake ..
 ```
@@ -60,7 +60,7 @@ To update your forked repository, check this page: [how-do-i-update-a-github-for
 
 Basically, you are required to add our repository as a remote to your own one:
 ```
-git remote add upstream git@gitlab.cs.fau.de:i9vc/teaching/ws23/physsim-ws23.git
+git remote add upstream git@gitlab.rrze.fau.de:vc/teaching/ss24/physsim-ss24.git
 ```
 Then, fetch updates from it:
 ```
