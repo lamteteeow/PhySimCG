@@ -87,21 +87,31 @@ namespace physsim
          */
         void advance(double elapsedTime, double totalTime, int64_t timeStep) override
         {
+            Eigen::Vector3d vTime = Eigen::Vector3d(mTime, mTime, mTime);
+            Eigen::Vector3d vStepSize = Eigen::Vector3d(mStepSize, mStepSize, mStepSize);
+
             // TODO: analytical solution
             // x(t) = x_0 + v_0*t + 0.5*a*t^2
             // v(t) = v_0 + a*t
-            mPosition[EMethod::Analytic] = mInitialPosition;    // <- adjust
-            mVelocity[EMethod::Analytic] = mInitialVelocity;    // <- adjust
+            // order is important
+            mPosition[EMethod::Analytic] = mInitialPosition + (mInitialVelocity.cwiseProduct(vTime)) + (mGravity.cwiseProduct(vTime.cwiseProduct(vTime)) / 2.0);
+            mVelocity[EMethod::Analytic] = mInitialVelocity + mGravity.cwiseProduct(vTime);
             addSphere(mPosition[EMethod::Analytic], 0.03, Spectrum(1, 0, 0));
 
             // TODO: explicit euler
             // x' = x + dt*v
             // v' = v + dt*a
+            // order is important
+            mPosition[EMethod::ExplicitEuler] += mVelocity[EMethod::ExplicitEuler].cwiseProduct(vStepSize);
+            mVelocity[EMethod::ExplicitEuler] += mGravity.cwiseProduct(vStepSize);
             addSphere(mPosition[EMethod::ExplicitEuler], 0.03, Spectrum(0, 1, 0));
 
             // TODO: symplectic euler
             // v' = v + dt*a
             // x' = x + dt*v'
+            // order is important
+            mVelocity[EMethod::SymplecticEuler] += mGravity.cwiseProduct(vStepSize);
+            mPosition[EMethod::SymplecticEuler] += mVelocity[EMethod::SymplecticEuler].cwiseProduct(vStepSize);
             addSphere(mPosition[EMethod::SymplecticEuler], 0.03, Spectrum(0, 0, 1));
 
             mTime += mStepSize;
