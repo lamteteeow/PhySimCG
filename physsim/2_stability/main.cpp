@@ -141,6 +141,11 @@ namespace physsim
             double m                   = mSpring.mass;
             double L                   = mSpring.length;
 
+            double alpha = -gamma / (2 * m);
+            double beta  = sqrt(4*k*m - pow(gamma,2) / (2 * m));
+            double c1    = -m * mGravity[2] / k;
+            double c2    = -c1 * alpha / beta;
+
             // compute force
             Eigen::Vector3d f_int  = -k * (spring_norm - L) * spring_dir;
             Eigen::Vector3d f_damp = -gamma * mSpring.endVelocity;
@@ -157,6 +162,10 @@ namespace physsim
             case EMethod::Analytical:
             {
                 // TODO: analytical solution
+                double z = c1 * exp(alpha * totalTime) * cos(beta * totalTime) + c2 * exp(alpha * totalTime) * sin(beta * totalTime) - L + m * mGravity[2] / k;
+                double w = exp(alpha * totalTime) * (c1 * (alpha * cos(beta * totalTime) - beta * sin(beta * totalTime)) + c2 * (alpha * sin(beta * totalTime) + beta * cos(beta * totalTime)));
+                mSpring.endPosition = mSpring.startPosition + Eigen::Vector3d(0, 0, z);
+                mSpring.endVelocity = Eigen::Vector3d(0, 0, w);
                 break;
             }
 
