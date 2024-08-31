@@ -90,8 +90,8 @@ namespace physsim
             mSpring.endVelocity   = Eigen::Vector3d(0, 0, 0);
 
             // create a sphere for the end point and assign a bsdf
-            auto sphere       = std::make_shared<Sphere>();
-            sphere->bsdf      = std::make_shared<DiffuseBSDF>(std::make_shared<ConstTexture>(Spectrum(1, 0, 0)));
+            auto sphere  = std::make_shared<Sphere>();
+            sphere->bsdf = std::make_shared<DiffuseBSDF>(std::make_shared<ConstTexture>(Spectrum(1, 0, 0)));
             sphere->transform.setMatrix(Eigen::Matrix4d::translate(mSpring.endPosition));
 
             // create a point light
@@ -142,7 +142,7 @@ namespace physsim
             double L                   = mSpring.length;
 
             double alpha = -gamma / (2 * m);
-            double beta  = sqrt(4*k*m - pow(gamma,2) / (2 * m));
+            double beta  = sqrt(4 * k * m - pow(gamma, 2) / (2 * m));
             double c1    = -m * mGravity[2] / k;
             double c2    = -c1 * alpha / beta;
 
@@ -153,8 +153,8 @@ namespace physsim
             Eigen::Vector3d f      = f_int + f_damp + f_ext;
             // a = f / m
             Eigen::Vector3d a = f / m;
-            Eigen::Vector3d v = mSpring.endVelocity;
-            Eigen::Vector3d x = mSpring.endPosition;
+            Eigen::Vector3d v = mSpring.endVelocity; // previous velocity
+            Eigen::Vector3d x = mSpring.endPosition; // previous position
 
             // note that it is required to update both m_spring.end and p_cube's position
             switch (mMethod)
@@ -162,31 +162,40 @@ namespace physsim
             case EMethod::Analytical:
             {
                 // TODO: analytical solution
-                double z = c1 * exp(alpha * totalTime) * cos(beta * totalTime) + c2 * exp(alpha * totalTime) * sin(beta * totalTime) - L + m * mGravity[2] / k;
-                double w = exp(alpha * totalTime) * (c1 * (alpha * cos(beta * totalTime) - beta * sin(beta * totalTime)) + c2 * (alpha * sin(beta * totalTime) + beta * cos(beta * totalTime)));
+                double z            = c1 * exp(alpha * mTime) * cos(beta * mTime) + c2 * exp(alpha * mTime) * sin(beta * mTime) - L + m * mGravity[2] / k;
+                double w            = exp(alpha * mTime) * (c1 * (alpha * cos(beta * mTime) - beta * sin(beta * mTime)) + c2 * (alpha * sin(beta * mTime) + beta * cos(beta * mTime)));
                 mSpring.endPosition = mSpring.startPosition + Eigen::Vector3d(0, 0, z);
                 mSpring.endVelocity = Eigen::Vector3d(0, 0, w);
-                break;
             }
 
             case EMethod::ExplicitEuler:
                 // TODO: explicit euler
-                break;
+                mSpring.endVelocity += mStepSize * a;   
+                mSpring.endPosition += mStepSize * v;
 
             case EMethod::SymplecticEuler:
                 // TODO: symplectic euler
-                break;
+                mSpring.endVelocity += mStepSize * a;
+                mSpring.endPosition += mStepSize * mSpring.endVelocity;
 
             case EMethod::ExplicitRK2:
             {
                 // TODO: explicit second-order Runge-Kutta
-                break;
+                /*Eigen::Vector3d k1 = v;
+                Eigen::Vector3d k2 = v + mStepSize / 2 * a;
+                mSpring.endPosition += mStepSize * k2;
+                mSpring.endVelocity += mStepSize * a;*/
+                mSpring.endVelocity += mStepSize / 2 * a;
+                mSpring.endPosition += mStepSize * mSpring.endVelocity;
+                mSpring.endVelocity += mStepSize / 2 * a;
             }
 
             case EMethod::ImplicitEuler:
             {
                 // TODO: implicit euler
-                break;
+                double w = (m * v[2] - mStepSize * k * x[2] + mStepSize * mGravity[2] * m - mStepSize * L * k) / (k * pow(mStepSize, 2) + gamma * mStepSize + m);
+                mSpring.endVelocity = Eigen::Vector3d(0, 0, w);
+                mSpring.endPosition += mStepSize * mSpring.endVelocity;
             }
             }
 
