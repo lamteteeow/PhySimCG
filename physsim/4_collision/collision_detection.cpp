@@ -68,7 +68,11 @@ namespace physsim
         case EBroadPhaseMethod::SweepAndPrune:
         {
             // TODO: compute bounding boxes and create intervals on the 3 main axes
-            
+            /*std::vector<Eigen::AlignedBox3d> snp(mObjects.size());
+            for (size_t i = 0; i < snp.size(); i++)
+            {
+                snp[i] = mObjects[i]->shape()->worldBounds();
+            }*/
             // TODO: sort intervals in ascending order by beginning of interval
 
             // TODO: iterate and place overlaps in a set
@@ -351,8 +355,17 @@ namespace physsim
             Eigen::Vector3d rb = contact.p - contact.b->position();
 
             // TODO: compute impulse response
+            double ima = contact.a->massInverse();
+            double imb = contact.b->massInverse();
+            Eigen::Matrix3d iia = contact.a->inertiaWorldInverse();
+            Eigen::Matrix3d iib = contact.b->inertiaWorldInverse();
+
+            double j_mag = (-(1 + eps) * vrel) / (ima + imb + contact.n.dot((ima * ra.cross(contact.n)).cross(ra) + (imb * rb.cross(contact.n)).cross(rb)));
 
             // TODO: apply impulse forces to the bodies at the contact point
+            // to be asked why is it flipped? there is sthg wrong here
+            contact.a->applyForce(contact.p, -j_mag * contact.n * stepSize);
+            contact.b->applyForce(contact.p, j_mag * contact.n * stepSize);
         }
     }
 
