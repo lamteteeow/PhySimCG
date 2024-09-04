@@ -4,6 +4,8 @@
 #include "transformed_mesh.hpp"
 
 #include <vislab/core/array.hpp>
+#include <string>
+#include <iostream>
 
 namespace physsim
 {
@@ -68,18 +70,77 @@ namespace physsim
         case EBroadPhaseMethod::SweepAndPrune:
         {
             // TODO: compute bounding boxes and create intervals on the 3 main axes
-            /*std::vector<Eigen::AlignedBox3d> snp(mObjects.size());
-            for (size_t i = 0; i < snp.size(); i++)
+            std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
+            //printf("%d\n", mObjects.size());
+            std::vector<std::pair<size_t, size_t>> x_interval;
+            std::vector<std::pair<size_t, size_t>> y_interval;
+            std::vector<std::pair<size_t, size_t>> z_interval;
+            for (size_t i = 0; i < aabbs.size(); i++)
             {
-                snp[i] = mObjects[i]->shape()->worldBounds();
-            }*/
+                aabbs[i] = mObjects[i]->shape()->worldBounds();
+                //printf("%d\n", aabbs);
+                x_interval.push_back({ aabbs[i].min()[0], aabbs[i].max()[0] });
+                //printf("%d\n", aabbs[i].min()[0]);
+                //printf("%d\n", aabbs[i].max()[0]);
+                y_interval.push_back({ aabbs[i].min()[1], aabbs[i].max()[1] });
+                z_interval.push_back({ aabbs[i].min()[2], aabbs[i].max()[2] });
+            }
+
             // TODO: sort intervals in ascending order by beginning of interval
+            // maybe implement insertion sort here
+            std::sort(x_interval.begin(), x_interval.end(), [](const auto& a, const auto& b)
+                      { return a.first < b.first; });
+            std::sort(y_interval.begin(), y_interval.end(), [](const auto& a, const auto& b)
+                      { return a.first < b.first; });
+            std::sort(z_interval.begin(), z_interval.end(), [](const auto& a, const auto& b)
+                      { return a.first < b.first; });
 
             // TODO: iterate and place overlaps in a set
-            
+            std::set<std::pair<size_t, size_t>> overlaps;
+            std::set<std::pair<size_t, size_t>> x_overlaps;
+            std::set<std::pair<size_t, size_t>> y_overlaps;
+            std::set<std::pair<size_t, size_t>> z_overlaps;
+            // mOjects.size() == x_interval.size() == y_interval.size() == z_interval.size()
+            for (size_t i = 0; i < mObjects.size(); i++)
+            {
+                for (size_t j = i + 1; j < mObjects.size(); j++)
+                {
+                    if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
+                    {
+                        if (x_interval[i].second > x_interval[j].first)
+                        {
+                            overlaps.insert(std::make_pair(i, j));
+                            x_overlaps.insert(std::make_pair(i, j));
+                            //printf("X got it");
+                        }
+                        if (y_interval[i].second > y_interval[j].first)
+                        {
+                            overlaps.insert(std::make_pair(i, j));
+                            y_overlaps.insert(std::make_pair(i, j));
+                            //printf("Y got it");
+                        }
+                        if (z_interval[i].second > z_interval[j].first)
+                        {
+                            overlaps.insert(std::make_pair(i, j));
+                            z_overlaps.insert(std::make_pair(i, j));
+                            printf("Z got it");
+                        }
+                    }
+                }
+            }
             // TODO: grab elements that occurred in all containers for the narrow test
-            
-            // TODO: pass the intersections on to the narrow phase
+            for (const std::pair<size_t, size_t>& overlap : overlaps)
+            {
+                if (std::find(x_overlaps.begin(), x_overlaps.end(), overlap) != x_overlaps.end() && 
+                    std::find(y_overlaps.begin(), y_overlaps.end(), overlap) != y_overlaps.end() &&
+                    std::find(z_overlaps.begin(), z_overlaps.end(), overlap) != z_overlaps.end())
+                {
+                    // TODO: pass the intersections on to the narrow phase
+                    printf("%d, %d", overlap.first, overlap.second);
+
+                    mOverlappingBodys.push_back(overlap);
+                }
+            }
             break;
         }
         }
@@ -360,12 +421,12 @@ namespace physsim
             Eigen::Matrix3d iia = contact.a->inertiaWorldInverse();
             Eigen::Matrix3d iib = contact.b->inertiaWorldInverse();
 
-            double j_mag = (-(1 + eps) * vrel) / (ima + imb + contact.n.dot((ima * ra.cross(contact.n)).cross(ra) + (imb * rb.cross(contact.n)).cross(rb)));
+            double j_mag = (-(1 + eps) * -vrel) / (ima + imb + (ima * ra.cross(contact.n)).cross(ra).dot(contact.n) + (imb * rb.cross(contact.n)).cross(rb).dot(contact.n));
 
             // TODO: apply impulse forces to the bodies at the contact point
             // to be asked why is it flipped? there is sthg wrong here
-            contact.a->applyForce(contact.p, -j_mag * contact.n * stepSize);
-            contact.b->applyForce(contact.p, j_mag * contact.n * stepSize);
+            contact.a->applyForce(contact.p, j_mag * contact.n * stepSize);
+            contact.b->applyForce(contact.p, -j_mag * contact.n * stepSize);
         }
     }
 
