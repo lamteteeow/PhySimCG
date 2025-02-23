@@ -29,120 +29,203 @@ namespace physsim
 
         switch (broadPhaseMethod)
         {
-        case EBroadPhaseMethod::None:
-        {
-            for (size_t i = 0; i < mObjects.size(); i++)
+            case EBroadPhaseMethod::None:
             {
-                for (size_t j = i + 1; j < mObjects.size(); j++)
+                for (size_t i = 0; i < mObjects.size(); i++)
                 {
-                    if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
-                        mOverlappingBodys.push_back(std::make_pair(i, j));
-                }
-            }
-            break;
-        }
-
-        case EBroadPhaseMethod::AABB:
-        {
-            // compute bounding boxes
-            std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
-            for (size_t i = 0; i < aabbs.size(); i++)
-            {
-                aabbs[i] = mObjects[i]->shape()->worldBounds();
-            }
-            for (size_t i = 0; i < mObjects.size(); i++)
-            {
-                for (size_t j = i + 1; j < mObjects.size(); j++)
-                {
-                    // add pair of objects to possible collision if their bounding boxes overlap
-                    if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
+                    for (size_t j = i + 1; j < mObjects.size(); j++)
                     {
-                        if (aabbs[i].intersects(aabbs[j]))
-                        {
+                        if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
                             mOverlappingBodys.push_back(std::make_pair(i, j));
-                        }
                     }
                 }
-            }
-            break;
-        }
-
-        case EBroadPhaseMethod::SweepAndPrune:
-        {
-            // TODO: compute bounding boxes and create intervals on the 3 main axes
-            std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
-            //printf("%d\n", mObjects.size());
-            std::vector<std::pair<size_t, size_t>> x_interval;
-            std::vector<std::pair<size_t, size_t>> y_interval;
-            std::vector<std::pair<size_t, size_t>> z_interval;
-            for (size_t i = 0; i < aabbs.size(); i++)
-            {
-                aabbs[i] = mObjects[i]->shape()->worldBounds();
-                //printf("%d\n", aabbs);
-                x_interval.push_back({ aabbs[i].min()[0], aabbs[i].max()[0] });
-                //printf("%d\n", aabbs[i].min()[0]);
-                //printf("%d\n", aabbs[i].max()[0]);
-                y_interval.push_back({ aabbs[i].min()[1], aabbs[i].max()[1] });
-                z_interval.push_back({ aabbs[i].min()[2], aabbs[i].max()[2] });
+                break;
             }
 
-            // TODO: sort intervals in ascending order by beginning of interval
-            // maybe implement insertion sort here
-            std::sort(x_interval.begin(), x_interval.end(), [](const auto& a, const auto& b)
-                      { return a.first < b.first; });
-            std::sort(y_interval.begin(), y_interval.end(), [](const auto& a, const auto& b)
-                      { return a.first < b.first; });
-            std::sort(z_interval.begin(), z_interval.end(), [](const auto& a, const auto& b)
-                      { return a.first < b.first; });
-
-            // TODO: iterate and place overlaps in a set
-            std::set<std::pair<size_t, size_t>> overlaps;
-            std::set<std::pair<size_t, size_t>> x_overlaps;
-            std::set<std::pair<size_t, size_t>> y_overlaps;
-            std::set<std::pair<size_t, size_t>> z_overlaps;
-            // mOjects.size() == x_interval.size() == y_interval.size() == z_interval.size()
-            for (size_t i = 0; i < mObjects.size(); i++)
+            case EBroadPhaseMethod::AABB:
             {
-                for (size_t j = i + 1; j < mObjects.size(); j++)
+                // compute bounding boxes
+                std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
+                for (size_t i = 0; i < aabbs.size(); i++)
                 {
-                    if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
+                    aabbs[i] = mObjects[i]->shape()->worldBounds();
+                }
+                for (size_t i = 0; i < mObjects.size(); i++)
+                {
+                    for (size_t j = i + 1; j < mObjects.size(); j++)
                     {
-                        if (x_interval[i].second > x_interval[j].first)
+                        // add pair of objects to possible collision if their bounding boxes overlap
+                        if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
                         {
-                            overlaps.insert(std::make_pair(i, j));
-                            x_overlaps.insert(std::make_pair(i, j));
-                            //printf("X got it");
-                        }
-                        if (y_interval[i].second > y_interval[j].first)
-                        {
-                            overlaps.insert(std::make_pair(i, j));
-                            y_overlaps.insert(std::make_pair(i, j));
-                            //printf("Y got it");
-                        }
-                        if (z_interval[i].second > z_interval[j].first)
-                        {
-                            overlaps.insert(std::make_pair(i, j));
-                            z_overlaps.insert(std::make_pair(i, j));
-                            printf("Z got it");
+                            if (aabbs[i].intersects(aabbs[j]))
+                            {
+                                mOverlappingBodys.push_back(std::make_pair(i, j));
+                            }
                         }
                     }
                 }
+                break;
             }
-            // TODO: grab elements that occurred in all containers for the narrow test
-            for (const std::pair<size_t, size_t>& overlap : overlaps)
-            {
-                if (std::find(x_overlaps.begin(), x_overlaps.end(), overlap) != x_overlaps.end() && 
-                    std::find(y_overlaps.begin(), y_overlaps.end(), overlap) != y_overlaps.end() &&
-                    std::find(z_overlaps.begin(), z_overlaps.end(), overlap) != z_overlaps.end())
-                {
-                    // TODO: pass the intersections on to the narrow phase
-                    printf("%d, %d", overlap.first, overlap.second);
 
-                    mOverlappingBodys.push_back(overlap);
+            case EBroadPhaseMethod::SweepAndPrune:
+            {
+                // TODO: compute bounding boxes and create intervals on the 3 main axes
+                //std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size()); // 5 boxes + 1 plane
+                ////printf("%d\n", mObjects.size());
+                //std::vector<std::pair<size_t, size_t>> x_interval;
+                //std::vector<std::pair<size_t, size_t>> y_interval;
+                //std::vector<std::pair<size_t, size_t>> z_interval;
+                //for (size_t i = 0; i < aabbs.size(); i++)
+                //{
+                //    aabbs[i] = mObjects[i]->shape()->worldBounds();
+                //    //printf("%d\n", aabbs);
+                //    x_interval.push_back({ aabbs[i].min()[0], aabbs[i].max()[0] });
+                //    //printf("%d\n", aabbs[i].min()[0]);
+                //    //printf("%d\n", aabbs[i].max()[0]);
+                //    y_interval.push_back({ aabbs[i].min()[1], aabbs[i].max()[1] });
+                //    z_interval.push_back({ aabbs[i].min()[2], aabbs[i].max()[2] });
+                //}
+
+                 // Compute AABBs for all objects
+                std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
+                for (size_t i = 0; i < mObjects.size(); ++i)
+                {
+                    aabbs[i] = mObjects[i]->shape()->worldBounds();
                 }
+
+                // Define interval structure to track original indices
+                struct Interval
+                {
+                    double min;
+                    double max;
+                    size_t original_idx;
+                };
+
+                // Create sorted intervals for each axis
+                std::vector<Interval> x_intervals, y_intervals, z_intervals;
+                for (size_t i = 0; i < mObjects.size(); ++i)
+                {
+                    const auto& aabb = aabbs[i];
+                    x_intervals.push_back({ aabb.min()[0], aabb.max()[0], i });
+                    y_intervals.push_back({ aabb.min()[1], aabb.max()[1], i });
+                    z_intervals.push_back({ aabb.min()[2], aabb.max()[2], i });
+                }
+
+
+                // TODO: sort intervals in ascending order by beginning of interval
+                // maybe implement insertion sort here
+                /*std::sort(x_interval.begin(), x_interval.end(), [](const auto& a, const auto& b)
+                          { return a.first < b.first; });
+                std::sort(y_interval.begin(), y_interval.end(), [](const auto& a, const auto& b)
+                          { return a.first < b.first; });
+                std::sort(z_interval.begin(), z_interval.end(), [](const auto& a, const auto& b)
+                          { return a.first < b.first; });*/
+
+                // Sort intervals by their minimum value
+                auto sort_by_min = [](const Interval& a, const Interval& b)
+                { return a.min < b.min; };
+                std::sort(x_intervals.begin(), x_intervals.end(), sort_by_min);
+                std::sort(y_intervals.begin(), y_intervals.end(), sort_by_min);
+                std::sort(z_intervals.begin(), z_intervals.end(), sort_by_min);
+
+                // TODO: iterate and place overlaps in a set
+                //std::set<std::pair<size_t, size_t>> overlaps;
+                //std::set<std::pair<size_t, size_t>> x_overlaps;
+                //std::set<std::pair<size_t, size_t>> y_overlaps;
+                //std::set<std::pair<size_t, size_t>> z_overlaps;
+                //// mOjects.size() == x_interval.size() == y_interval.size() == z_interval.size()
+                //for (size_t i = 0; i < mObjects.size(); i++)
+                //{
+                //    for (size_t j = i + 1; j < mObjects.size(); j++)
+                //    {
+                //        if (mObjects[i]->type() == RigidBody::EType::Dynamic || mObjects[j]->type() == RigidBody::EType::Dynamic)
+                //        {
+                //            if (x_interval[i].second > x_interval[j].first)
+                //            {
+                //                overlaps.insert(std::make_pair(i, j));
+                //                x_overlaps.insert(std::make_pair(i, j));
+                //                //printf("X got it");
+                //            }
+                //            if (y_interval[i].second > y_interval[j].first)
+                //            {
+                //                overlaps.insert(std::make_pair(i, j));  
+                //                y_overlaps.insert(std::make_pair(i, j));
+                //                //printf("Y got it");
+                //            }
+                //            if (z_interval[i].second > z_interval[j].first)
+                //            {
+                //                overlaps.insert(std::make_pair(i, j));
+                //                z_overlaps.insert(std::make_pair(i, j));
+                //                printf("Z got it");
+                //            }
+                //        }
+                //    }
+                //}
+            
+                auto compute_axis_overlaps = [](const std::vector<Interval>& sorted_axis)
+                {
+                    std::set<std::pair<size_t, size_t>> overlaps;
+                    for (size_t i = 0; i < sorted_axis.size(); ++i)
+                    {
+                        const auto& current = sorted_axis[i];
+                        // Check all previous intervals for overlap
+                        for (size_t j = 0; j < i; ++j)
+                        {
+                            const auto& other = sorted_axis[j];
+                            if (other.max > current.min)
+                            {
+                                // Ensure ordered pair (a < b)
+                                size_t a = other.original_idx;
+                                size_t b = current.original_idx;
+                                if (a > b)
+                                    std::swap(a, b);
+                                overlaps.insert({ a, b });
+                            }
+                            else
+                            {
+                                break; // No further overlaps due to sorting
+                            }
+                        }
+                    }
+                    return overlaps;
+                };
+
+                // Compute overlaps for each axis
+                std::set<std::pair<size_t, size_t>> x_overlaps = compute_axis_overlaps(x_intervals);
+                std::set<std::pair<size_t, size_t>> y_overlaps = compute_axis_overlaps(y_intervals);
+                std::set<std::pair<size_t, size_t>> z_overlaps = compute_axis_overlaps(z_intervals);
+
+            
+                // TODO: grab elements that occurred in all containers for the narrow test
+                //for (const std::pair<size_t, size_t>& overlap : overlaps)
+                //{
+                //    if (std::find(x_overlaps.begin(), x_overlaps.end(), overlap) != x_overlaps.end() && 
+                //        std::find(y_overlaps.begin(), y_overlaps.end(), overlap) != y_overlaps.end() &&
+                //        std::find(z_overlaps.begin(), z_overlaps.end(), overlap) != z_overlaps.end())
+                //    {
+                //        // TODO: pass the intersections on to the narrow phase
+                //        printf("%d, %d", (int)overlap.first, (int)overlap.second);
+
+                //        mOverlappingBodys.push_back(overlap);
+                //    }
+                //}
+                //break;
+
+                // Intersect overlaps from all three axes
+                for (const auto& pair : x_overlaps)
+                {
+                    if (y_overlaps.count(pair) && z_overlaps.count(pair))
+                    {
+                        // Check if at least one body is dynamic
+                        if (mObjects[pair.first]->type() == RigidBody::EType::Dynamic ||
+                            mObjects[pair.second]->type() == RigidBody::EType::Dynamic)
+                        {
+                            mOverlappingBodys.push_back(pair);
+                        }
+                    }
+                }
+                break;
             }
-            break;
-        }
         }
     }
 
@@ -421,12 +504,16 @@ namespace physsim
             Eigen::Matrix3d iia = contact.a->inertiaWorldInverse();
             Eigen::Matrix3d iib = contact.b->inertiaWorldInverse();
 
-            double j_mag = (-(1 + eps) * -vrel) / (ima + imb + (ima * ra.cross(contact.n)).cross(ra).dot(contact.n) + (imb * rb.cross(contact.n)).cross(rb).dot(contact.n));
+            double j_mag = (-(1 + eps) * vrel) / (ima + imb + (iia * ra.cross(contact.n)).cross(ra).dot(contact.n) + (iib * rb.cross(contact.n)).cross(rb).dot(contact.n));
 
             // TODO: apply impulse forces to the bodies at the contact point
-            // to be asked why is it flipped? there is sthg wrong here
-            contact.a->applyForce(contact.p, j_mag * contact.n * stepSize);
-            contact.b->applyForce(contact.p, -j_mag * contact.n * stepSize);
+            Eigen::Vector3d force = j_mag * contact.n;
+            //Eigen::Vector3d force = j_mag * contact.n * stepSize;
+
+            contact.a->applyForce(force, contact.p);
+            contact.b->applyForce(-force, contact.p);
+            contact.a->applyTorque(ra.cross(force));
+            contact.b->applyTorque(-ra.cross(force));
         }
     }
 

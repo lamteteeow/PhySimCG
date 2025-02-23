@@ -38,7 +38,7 @@ namespace physsim
          * @brief Constructor for a new cloth.
          * @param resolution Resolution of the grid.
          * @param topology Connectivity of the springs.
-         * @param origin Origin of the mesh grid.
+         * @param origin Origin of the mesh gri
          * @param axis1 Horizontal axis for the grid (x coordinate spacing).
          * @param axis2 Vertical axis for the grid (y coordinate spacing).
          */
