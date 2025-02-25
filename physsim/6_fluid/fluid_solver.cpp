@@ -402,7 +402,7 @@ namespace physsim
         Eigen::VectorXd b(mResolution.x() * mResolution.y());
         for (int j = 0; j < mResolution.y(); ++j)
             for (int i = 0; i < mResolution.x(); ++i)
-                b(j * (size_t)mResolution.x() + i) = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // ... set correct value
+                b(j * (size_t)mResolution.x() + i) = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho * dx2; // ... set correct value
 
         // solve sparse linear SPD system
         Eigen::VectorXd pout = mPoissonFactorization.solve(b);
@@ -672,22 +672,20 @@ namespace physsim
                 mDensity->setVertexDataAt({ i, j }, mDensity_tmp->getVertexDataAt({ i, j }));
     }
 
+    // Stop and start then stop then restart the simulation in order to build again! (by default open)
+    // Suggestion: do not auto-start simulation after run
     void FluidSolver::buildLaplace2d(Eigen::SparseMatrix<double>& A)
     {
         Eigen::Vector2i resolution = mPressure->getGrid()->getResolution();
+        //printf("res = (%d * %d)", resolution.y(), resolution.x());
 
         std::list<Eigen::Triplet<double>> coeff;
         for (int j = 0; j < resolution.y(); ++j)
             for (int i = 0; i < resolution.x(); ++i)
             {
-                // TODO: not yet finished
-                // diagonal assuming square matrix and i as inner loop
-                if ((i - j == 1 || i - j == 4) && ((i+j)%4 != 3))
-                {
-                    coeff.push_back(Eigen::Triplet<double>(j, i, 1));
-                    coeff.push_back(Eigen::Triplet<double>(i, j, 1));
-                }
-                coeff.push_back(Eigen::Triplet<double>(j * resolution.x() + i, j * resolution.x() + i, -4));
+                // Here using emplace_back instead of push_back for best practice (MSVC10 might not support it)
+
+                int idx = j * resolution.x() + i;
                     
                 switch (boundary)
                 {
@@ -709,6 +707,16 @@ namespace physsim
                     // 	0  0  0  0  0  0  0  0  0  1  0  0  1 -4  1  0
                     // 	0  0  0  0  0  0  0  0  0  0  1  0  0  1 -4  1
                     // 	0  0  0  0  0  0  0  0  0  0  0  1  0  0  1 -4
+                    coeff.emplace_back(idx, idx, -4.0);
+                    if (i > 0)
+                        coeff.emplace_back(idx, (j * resolution.x()) + (i - 1), 1.0);
+                    if (i < resolution.x() - 1)
+                        coeff.emplace_back(idx, (j * resolution.x()) + (i + 1), 1.0);
+                    if (j > 0)
+                        coeff.emplace_back(idx, ((j - 1) * resolution.x()) + i, 1.0);
+                    if (j < resolution.y() - 1)
+                        coeff.emplace_back(idx, ((j + 1) * resolution.x()) + i, 1.0);
+                    //printf("open");
                     break;
                 case EBoundary::Closed: // forward/backward difference on boundary   (same pattern of -1's, but the main diagonal contains the number of -1's per row)
                     // -2  1  0  0  1  0  0  0  0  0  0  0  0  0  0  0
@@ -727,10 +735,45 @@ namespace physsim
                     //	0  0  0  0  0  0  0  0  0  1  0  0  1 -3  1  0
                     //	0  0  0  0  0  0  0  0  0  0  1  0  0  1 -3  1
                     //	0  0  0  0  0  0  0  0  0  0  0  1  0  0  1 -2
+                    int num_neighbors = 0;
+                    if (i > 0)
+                    {
+                        coeff.emplace_back(idx, (j * resolution.x()) + (i - 1), 1.0);
+                        num_neighbors++;
+                    }
+                    if (i < resolution.x() - 1)
+                    {
+                        coeff.emplace_back(idx, (j * resolution.x()) + (i + 1), 1.0);
+                        num_neighbors++;
+                    }
+                    if (j > 0)
+                    {
+                        coeff.emplace_back(idx, ((j - 1) * resolution.x()) + i, 1.0);
+                        num_neighbors++;
+                    }
+                    if (j < resolution.y() - 1)
+                    {
+                        coeff.emplace_back(idx, ((j + 1) * resolution.x()) + i, 1.0);
+                        num_neighbors++;
+                    }
+                    coeff.emplace_back(idx, idx, -num_neighbors);
+                    //printf("close");
                     break;
                 }
             }
 
         A.setFromTriplets(coeff.begin(), coeff.end());
+        
+        /*if (boundary == EBoundary::Closed) {
+            for (int i = 0; i < A.rows(); ++i)
+            {
+                printf("[");
+                for (int j = 0; j < A.cols(); ++j)
+                {
+                    printf("%d", (int)A.coeff(i, j));
+                }
+                printf("]\n");
+            }
+        }*/
     }
 }
