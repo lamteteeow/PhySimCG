@@ -1,7 +1,9 @@
 # Physically-based Simulation 2024 - Course Exercises
 
-![Feature image of Smoothed Particle Hydrodynamics
-implementation](images/sph.png)
+![Feature image of Smoothed Particle Hydrodynamics implementation](images/sph.png)
+
+![Feature image of trochoidal ocean wave](images/trochoidal.png)
+
 
 ## Installation
 
