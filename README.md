@@ -1,5 +1,8 @@
 # Physically-based Simulation 2024 - Course Exercises
 
+![Feature image of Smoothed Particle Hydrodynamics
+implementation](images/sph.png)
+
 ## Installation
 
 ### Git and CMAKE
