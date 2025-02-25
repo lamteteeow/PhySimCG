@@ -311,6 +311,21 @@ namespace physsim
                     {
                         float b = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // right-hand
                         // TODO: update the pressure values
+                        float p_center = mPressure->getVertexDataAt({ i, j }).x();
+                        float sum      = 0.0f;
+
+                        // Gauss-Seidel implementation
+                        // West neighbor
+                        sum += (i > 0) ? mPressure->getVertexDataAt({ i - 1, j }).x() : p_center;
+                        // South neighbor
+                        sum += (j > 0) ? mPressure->getVertexDataAt({ i, j - 1 }).x() : p_center;
+                        // East neighbor
+                        sum += (i < mResolution.x() - 1) ? mPressure->getVertexDataAt({ i + 1, j }).x() : p_center;
+                        // North neighbor
+                        sum += (j < mResolution.y() - 1) ? mPressure->getVertexDataAt({ i, j + 1 }).x() : p_center;
+
+                        float p_new = (sum - dx2 * b) / 4.0f;
+                        mPressure->setVertexDataAt({ i, j }, p_new);
                     }
                 }
                 break;
@@ -321,6 +336,32 @@ namespace physsim
                     {
                         float b = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // right-hand
                         // TODO: update the pressure values
+                        float sum         = 0.0f;
+                        int num_neighbors = 0;
+
+                        if (i > 0)
+                        {
+                            sum += mPressure->getVertexDataAt({ i - 1, j }).x();
+                            num_neighbors++;
+                        }
+                        if (i < mResolution.x() - 1)
+                        {
+                            sum += mPressure->getVertexDataAt({ i + 1, j }).x();
+                            num_neighbors++;
+                        }
+                        if (j > 0)
+                        {
+                            sum += mPressure->getVertexDataAt({ i, j - 1 }).x();
+                            num_neighbors++;
+                        }
+                        if (j < mResolution.y() - 1)
+                        {
+                            sum += mPressure->getVertexDataAt({ i, j + 1 }).x();
+                            num_neighbors++;
+                        }
+
+                        float p_new = (sum - dx2 * b) / num_neighbors;
+                        mPressure->setVertexDataAt({ i, j }, p_new);
                     }
                 }
                 break;
@@ -334,6 +375,13 @@ namespace physsim
                 {
                     float b = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // right-hand
                     // TODO: compute the cell residual
+                    float p_center = mPressure->getVertexDataAt({ i, j }).x();
+                    float p_west   = mPressure->getVertexDataAt({ i - 1, j }).x();
+                    float p_east   = mPressure->getVertexDataAt({ i + 1, j }).x();
+                    float p_south  = mPressure->getVertexDataAt({ i, j - 1 }).x();
+                    float p_north  = mPressure->getVertexDataAt({ i, j + 1 }).x();
+                    float L = b - ((-4.0f * p_center + p_east + p_west + p_north + p_south) / dx2);
+                    residual += L * L;
                 }
             }
 
@@ -354,7 +402,7 @@ namespace physsim
         Eigen::VectorXd b(mResolution.x() * mResolution.y());
         for (int j = 0; j < mResolution.y(); ++j)
             for (int i = 0; i < mResolution.x(); ++i)
-                b(j * (size_t)mResolution.x() + i) = 0; // ... set correct value
+                b(j * (size_t)mResolution.x() + i) = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // ... set correct value
 
         // solve sparse linear SPD system
         Eigen::VectorXd pout = mPoissonFactorization.solve(b);
@@ -387,6 +435,14 @@ namespace physsim
             for (int i = 1; i < mResolution.x(); ++i)
             {
                 // TODO: update u
+                float p_east = mPressure->getVertexDataAt({ i, j }).x();
+                //printf("p_east: %f\n", p_east);
+                float p_west = mPressure->getVertexDataAt({ i - 1, j }).x();
+                //printf("p_west: %f\n", p_east);
+                float grad_p = (p_east - p_west) / mSpacing.x();
+                float u      = mVelocity_u->getVertexDataAt({ i - 1, j }).x() - stepSize * grad_p / 1.0f;
+                //printf("u: %f\n", u);
+                mVelocity_u->setVertexDataAt({ i, j }, u);
             }
 
         // Same for velocity v_{i+1/2}.
@@ -394,6 +450,14 @@ namespace physsim
             for (int i = 1; i < mResolution.x() - 1; ++i)
             {
                 // TODO: update v
+                float p_north = mPressure->getVertexDataAt({ i, j }).x();
+                // printf("p_north: %f\n", p_north);
+                float p_south = mPressure->getVertexDataAt({ i, j - 1 }).x();
+                // printf("p_south: %f\n", p_south);
+                float grad_p  = (p_north - p_south) / mSpacing.y();
+                float v       = mVelocity_v->getVertexDataAt({ i, j - 1}).x() - stepSize * grad_p / 1.0f;
+                //printf("v: %f\n", v);
+                mVelocity_v->setVertexDataAt({ i, j }, v);
             }
     }
 
@@ -418,12 +482,19 @@ namespace physsim
             for (int i = 1; i < mResolution.x(); ++i)
             { // skip first and last row: those are determined by the boundary condition
                 // TODO: Compute the velocity
-                float last_x_velocity = 0;  // ... set correct value
-                float last_y_velocity = 0;  // ... set correct value
+                float last_x_velocity = mVelocity_u->getVertexDataAt({ i, j }).x(); // ... set correct value
+                //float last_y_velocity = 0.5f * (mVelocity_v->getVertexDataAt({ i - 1, j }).x() + mVelocity_v->getVertexDataAt({ i - 1, j + 1 }).x()); // ... set correct value
+                float last_y_velocity = 0.25f * (mVelocity_v->getVertexDataAt({ i - 1, j }).x() + mVelocity_v->getVertexDataAt({ i - 1, j + 1 }).x() + mVelocity_v->getVertexDataAt({ i, j }).x() + mVelocity_v->getVertexDataAt({ i, j + 1 }).x()); // ... set correct value
+                //printf("last_x_velocity: %f\n", last_x_velocity);
+                //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
-                float last_x = 0;           // ... set correct value
-                float last_y = 0;           // ... set correct value
+                float last_x = i - (last_x_velocity * stepSize) / mSpacing.x();          // ... set correct value
+                //printf("last_x: %f\n", last_x);
+                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                //printf("last_y: %f\n", last_y);
+
+                // TODO: maybe with 2nd order Runge-Kutta
 
                 // Make sure the coordinates are inside the boundaries
                 if (last_x < 0)
@@ -446,6 +517,17 @@ namespace physsim
                 float y_weight = last_y - y_low;
 
                 // TODO: Bilinear interpolation
+                float u00 = mVelocity_u->getVertexDataAt({ x_low, y_low }).x();
+                float u01 = mVelocity_u->getVertexDataAt({ x_low, y_high }).x();
+                float u10 = mVelocity_u->getVertexDataAt({ x_high, y_low }).x();
+                float u11 = mVelocity_u->getVertexDataAt({ x_high, y_high }).x();
+
+                float interpolated_u = u00 * (1.0f - x_weight) * (1.0f - y_weight) 
+                                     + u10 * x_weight * (1.0f - y_weight) 
+                                     + u01 * (1.0f - x_weight) * y_weight 
+                                     + u11 * x_weight * y_weight;
+                //printf("interpolated_u: %f\n", interpolated_u);
+                mVelocity_u_tmp->setVertexDataAt({ i, j }, interpolated_u);
             }
         }
 
@@ -464,12 +546,19 @@ namespace physsim
             for (int i = 0; i < mResolution.x(); ++i)
             {
                 // TODO: Compute the velocity
-                float last_x_velocity = 0;  // ... set correct value
-                float last_y_velocity = 0;  // ... set correct value
+                //float last_x_velocity = 0.5f * (mVelocity_u->getVertexDataAt({ i, j }).x() + mVelocity_u->getVertexDataAt({ i, j - 1 }).x()); // ... set correct value
+                float last_x_velocity = 0.25f * (mVelocity_u->getVertexDataAt({ i + 1, j }).x() + mVelocity_u->getVertexDataAt({ i + 1, j - 1 }).x() + mVelocity_u->getVertexDataAt({ i, j }).x() + mVelocity_u->getVertexDataAt({ i, j - 1 }).x()); // ... set correct value
+                float last_y_velocity = mVelocity_v->getVertexDataAt({ i, j }).x();                                                           // ... set correct value
+                //printf("last_x_velocity: %f\n", last_x_velocity);
+                //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
-                float last_x = 0;           // ... set correct value
-                float last_y = 0;           // ... set correct value
+                 float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
+                //printf("last_x: %f\n", last_x);
+                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                //printf("last_y: %f\n", last_y);
+
+                // TODO: maybe with 2nd order Runge-Kutta
 
                 // Make sure the coordinates are inside the boundaries
                 if (last_x < 0)
@@ -492,6 +581,17 @@ namespace physsim
                 float y_weight = last_y - y_low;
 
                 // TODO: Bilinear interpolation
+                float v00 = mVelocity_v->getVertexDataAt({ x_low, y_low }).x();
+                float v01 = mVelocity_v->getVertexDataAt({ x_low, y_high }).x();
+                float v10 = mVelocity_v->getVertexDataAt({ x_high, y_low }).x();
+                float v11 = mVelocity_v->getVertexDataAt({ x_high, y_high }).x();
+
+                float interpolated_v = v00 * (1.0f - x_weight) * (1.0f - y_weight) 
+                                     + v10 * x_weight * (1.0f - y_weight)
+                                     + v01 * (1.0f - x_weight) * y_weight 
+                                     + v11 * x_weight * y_weight;
+                //printf("interpolated_v: %f\n", interpolated_v);
+                mVelocity_v_tmp->setVertexDataAt({ i, j }, interpolated_v);
             }
         }
 
@@ -522,15 +622,17 @@ namespace physsim
             for (int i = 0; i < mResolution.x(); ++i)
             {
                 // TODO: Compute the velocity
-                float last_x_velocity = 0;  // ... set correct value
-                float last_y_velocity = 0;  // ... set correct value
+                float last_x_velocity = 0.5f * (mVelocity_u->getVertexDataAt({ i, j }).x() + mVelocity_u->getVertexDataAt({ i + 1, j }).x()); // ... set correct value
+                float last_y_velocity = 0.5f * (mVelocity_v->getVertexDataAt({ i, j }).x() + mVelocity_v->getVertexDataAt({ i ,j + 1 }).x()); // ... set correct value
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
-                float last_x = 0;           // ... set correct value
-                float last_y = 0;           // ... set correct value
+                float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
+                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                
+                // TODO: maybe with 2nd order Runge-Kutta
 
                 // Make sure the coordinates are inside the boundaries
-                const float offset = 0.0; // a trick to fight the dissipation through boundaries is to sample with a small offset
+                const float offset = 0.0001; // a trick to fight the dissipation through boundaries is to sample with a small offset
                 if (last_x < offset)
                     last_x = offset;
                 if (last_y < offset)
@@ -551,6 +653,16 @@ namespace physsim
                 float y_weight = last_y - y_low;
 
                 // TODO: Bilinear interpolation
+                float p00 = mDensity->getVertexDataAt({ x_low, y_low }).x();
+                float p01 = mDensity->getVertexDataAt({ x_low, y_high }).x();
+                float p10 = mDensity->getVertexDataAt({ x_high, y_low }).x();
+                float p11 = mDensity->getVertexDataAt({ x_high, y_high }).x();
+
+                float interpolated_p = p00 * (1.0f - x_weight) * (1.0f - y_weight) 
+                                     + p10 * x_weight * (1.0f - y_weight) 
+                                     + p01 * (1.0f - x_weight) * y_weight 
+                                     + p11 * x_weight * y_weight;
+                mDensity_tmp->setVertexDataAt({ i, j }, interpolated_p);
             }
         }
 
@@ -568,8 +680,15 @@ namespace physsim
         for (int j = 0; j < resolution.y(); ++j)
             for (int i = 0; i < resolution.x(); ++i)
             {
+                // TODO: not yet finished
+                // diagonal assuming square matrix and i as inner loop
+                if ((i - j == 1 || i - j == 4) && ((i+j)%4 != 3))
+                {
+                    coeff.push_back(Eigen::Triplet<double>(j, i, 1));
+                    coeff.push_back(Eigen::Triplet<double>(i, j, 1));
+                }
                 coeff.push_back(Eigen::Triplet<double>(j * resolution.x() + i, j * resolution.x() + i, -4));
-
+                    
                 switch (boundary)
                 {
                 case EBoundary::Open: // smooth continuation
