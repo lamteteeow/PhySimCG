@@ -362,7 +362,7 @@ namespace physsim
             for (Eigen::Index i = 0; i < mPositions->getSize(); ++i)
             {
                 // TODO: compute pressure p_i from mDensities, using mStiffness (k), mRho0 (rest density) and mExponent (gamma).
-                float pi = 0;   // ... set correct value
+                float pi = mStiffness * (std::pow(mDensities->getValue(i).x() / mRho0, mExponent) - 1);  // ... set correct value
                 mPressures->setValue(i, pi);
             }
 
@@ -386,10 +386,14 @@ namespace physsim
                         float pj           = mPressures->getValue(n.first).x();
                         float rhoj         = mDensities->getValue(n.first).x();
                         float massj        = mMasses->getValue(n.first).x();
+                        Eigen::Vector3f grad = W.gradW(xi - xj);
+                        Eigen::Vector3f dir  = (xi - xj).normalized();
 
                         // TODO: pressure acceleration
+                        ai_p += -massj * (pi / (rhoi * rhoi) + pj / (rhoj * rhoj)) * grad;
 
                         // TODO: viscosity acceleration
+                        ai_p += mViscosity * massj / rhoj * (vi - vj).transpose() * dir * grad;
                     }
                 }
 
@@ -402,10 +406,14 @@ namespace physsim
                         float pk           = pi;    // pressure-mirroring
                         float rhok         = mRho0; // boundary is liquid at rest
                         float massk        = mBoundaryMasses->getValue(n.first).x();
+                        Eigen::Vector3f grad = W.gradW(xi - xk);
+                        Eigen::Vector3f dir  = (xi - xk).normalized();
 
                         // TODO: pressure acceleration (Akinci)
+                        ai_p += -massk * (pi / (rhoi * rhoi) + pk / (rhok * rhok)) * grad;
 
                         // TODO: viscosity acceleration (Akinci)
+                        ai_p += mViscosity * massk / rhok * vi.transpose() * dir * grad;
                     }
                 }
 
