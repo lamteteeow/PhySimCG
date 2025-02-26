@@ -436,12 +436,9 @@ namespace physsim
             {
                 // TODO: update u
                 float p_east = mPressure->getVertexDataAt({ i, j }).x();
-                //printf("p_east: %f\n", p_east);
                 float p_west = mPressure->getVertexDataAt({ i - 1, j }).x();
-                //printf("p_west: %f\n", p_east);
                 float grad_p = (p_east - p_west) / mSpacing.x();
                 float u      = mVelocity_u->getVertexDataAt({ i, j }).x() - stepSize * grad_p / 1.0f;
-                //printf("u: %f\n", u);
                 mVelocity_u->setVertexDataAt({ i, j }, u);
             }
 
@@ -451,12 +448,9 @@ namespace physsim
             {
                 // TODO: update v
                 float p_north = mPressure->getVertexDataAt({ i, j }).x();
-                // printf("p_north: %f\n", p_north);
                 float p_south = mPressure->getVertexDataAt({ i, j - 1 }).x();
-                // printf("p_south: %f\n", p_south);
                 float grad_p  = (p_north - p_south) / mSpacing.y();
                 float v       = mVelocity_v->getVertexDataAt({ i, j}).x() - stepSize * grad_p / 1.0f;
-                //printf("v: %f\n", v);
                 mVelocity_v->setVertexDataAt({ i, j }, v);
             }
     }
@@ -483,16 +477,11 @@ namespace physsim
             { // skip first and last row: those are determined by the boundary condition
                 // TODO: Compute the velocity
                 float last_x_velocity = mVelocity_u->getVertexDataAt({ i, j }).x(); // ... set correct value
-                //float last_y_velocity = 0.5f * (mVelocity_v->getVertexDataAt({ i - 1, j }).x() + mVelocity_v->getVertexDataAt({ i - 1, j + 1 }).x()); // ... set correct value
                 float last_y_velocity = 0.25f * (mVelocity_v->getVertexDataAt({ i - 1, j }).x() + mVelocity_v->getVertexDataAt({ i - 1, j + 1 }).x() + mVelocity_v->getVertexDataAt({ i, j }).x() + mVelocity_v->getVertexDataAt({ i, j + 1 }).x()); // ... set correct value
-                //printf("last_x_velocity: %f\n", last_x_velocity);
-                //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
                 float last_x = i - (last_x_velocity * stepSize) / mSpacing.x();  // ... set correct value
-                //printf("last_x: %f\n", last_x);
                 float last_y = j - (last_y_velocity * stepSize) / mSpacing.y();  // ... set correct value
-                //printf("last_y: %f\n", last_y);
 
                 // TODO: maybe with 2nd order Runge-Kutta
 
@@ -621,21 +610,16 @@ namespace physsim
         {
             for (int i = 0; i < mResolution.x(); ++i)
             {
-                //printf("mSpacing_x: %f\n", mSpacing.x()); // 0.007812
-                //printf("mSpacing_y: %f\n", mSpacing.y()); // 0.007812
-                //printf("stepsize = %f\n", stepSize); // 0.063246 
+                //mSpacing.x() = mSpacing.y() = 0.007812
+                //stepSize = 0.063246 
 
                 // TODO: Compute the velocity
                 float last_x_velocity = 0.5f * (mVelocity_u->getVertexDataAt({ i, j }).x() + mVelocity_u->getVertexDataAt({ i + 1, j }).x()); // ... set correct value
                 float last_y_velocity = 0.5f * (mVelocity_v->getVertexDataAt({ i, j }).x() + mVelocity_v->getVertexDataAt({ i ,j + 1 }).x()); // ... set correct value
-                // printf("last_x_velocity: %f\n", last_x_velocity);
-                 //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
                 float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
-                //printf("last_x: %f\n", last_x);
                 float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
-                //printf("last_y: %f\n", last_y);
                 
                 // TODO: maybe with 2nd order Runge-Kutta
 
@@ -685,16 +669,35 @@ namespace physsim
     void FluidSolver::buildLaplace2d(Eigen::SparseMatrix<double>& A)
     {
         Eigen::Vector2i resolution = mPressure->getGrid()->getResolution();
-        //printf("res = (%d * %d)", resolution.y(), resolution.x());
 
         std::list<Eigen::Triplet<double>> coeff;
         for (int j = 0; j < resolution.y(); ++j)
             for (int i = 0; i < resolution.x(); ++i)
             {
                 // Here using emplace_back instead of push_back for best practice (MSVC10 might not support it)
-
                 int idx = j * resolution.x() + i;
-                    
+                int num_neighbors = 0;
+                if (i > 0)
+                {
+                    coeff.emplace_back(idx, (j * resolution.x()) + (i - 1), 1.0);
+                    num_neighbors++;
+                }
+                if (i < resolution.x() - 1)
+                {
+                    coeff.emplace_back(idx, (j * resolution.x()) + (i + 1), 1.0);
+                    num_neighbors++;
+                }
+                if (j > 0)
+                {
+                    coeff.emplace_back(idx, ((j - 1) * resolution.x()) + i, 1.0);
+                    num_neighbors++;
+                }
+                if (j < resolution.y() - 1)
+                {
+                    coeff.emplace_back(idx, ((j + 1) * resolution.x()) + i, 1.0);
+                    num_neighbors++;
+                }
+
                 switch (boundary)
                 {
                 case EBoundary::Open: // smooth continuation
@@ -716,15 +719,6 @@ namespace physsim
                     // 	0  0  0  0  0  0  0  0  0  0  1  0  0  1 -4  1
                     // 	0  0  0  0  0  0  0  0  0  0  0  1  0  0  1 -4
                     coeff.emplace_back(idx, idx, -4.0);
-                    if (i > 0)
-                        coeff.emplace_back(idx, (j * resolution.x()) + (i - 1), 1.0);
-                    if (i < resolution.x() - 1)
-                        coeff.emplace_back(idx, (j * resolution.x()) + (i + 1), 1.0);
-                    if (j > 0)
-                        coeff.emplace_back(idx, ((j - 1) * resolution.x()) + i, 1.0);
-                    if (j < resolution.y() - 1)
-                        coeff.emplace_back(idx, ((j + 1) * resolution.x()) + i, 1.0);
-                    //printf("open");
                     break;
                 case EBoundary::Closed: // forward/backward difference on boundary   (same pattern of -1's, but the main diagonal contains the number of -1's per row)
                     // -2  1  0  0  1  0  0  0  0  0  0  0  0  0  0  0
@@ -743,29 +737,7 @@ namespace physsim
                     //	0  0  0  0  0  0  0  0  0  1  0  0  1 -3  1  0
                     //	0  0  0  0  0  0  0  0  0  0  1  0  0  1 -3  1
                     //	0  0  0  0  0  0  0  0  0  0  0  1  0  0  1 -2
-                    int num_neighbors = 0;
-                    if (i > 0)
-                    {
-                        coeff.emplace_back(idx, (j * resolution.x()) + (i - 1), 1.0);
-                        num_neighbors++;
-                    }
-                    if (i < resolution.x() - 1)
-                    {
-                        coeff.emplace_back(idx, (j * resolution.x()) + (i + 1), 1.0);
-                        num_neighbors++;
-                    }
-                    if (j > 0)
-                    {
-                        coeff.emplace_back(idx, ((j - 1) * resolution.x()) + i, 1.0);
-                        num_neighbors++;
-                    }
-                    if (j < resolution.y() - 1)
-                    {
-                        coeff.emplace_back(idx, ((j + 1) * resolution.x()) + i, 1.0);
-                        num_neighbors++;
-                    }
                     coeff.emplace_back(idx, idx, -num_neighbors);
-                    //printf("close");
                     break;
                 }
             }
