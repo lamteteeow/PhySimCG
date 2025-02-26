@@ -440,7 +440,7 @@ namespace physsim
                 float p_west = mPressure->getVertexDataAt({ i - 1, j }).x();
                 //printf("p_west: %f\n", p_east);
                 float grad_p = (p_east - p_west) / mSpacing.x();
-                float u      = mVelocity_u->getVertexDataAt({ i - 1, j }).x() - stepSize * grad_p / 1.0f;
+                float u      = mVelocity_u->getVertexDataAt({ i, j }).x() - stepSize * grad_p / 1.0f;
                 //printf("u: %f\n", u);
                 mVelocity_u->setVertexDataAt({ i, j }, u);
             }
@@ -455,7 +455,7 @@ namespace physsim
                 float p_south = mPressure->getVertexDataAt({ i, j - 1 }).x();
                 // printf("p_south: %f\n", p_south);
                 float grad_p  = (p_north - p_south) / mSpacing.y();
-                float v       = mVelocity_v->getVertexDataAt({ i, j - 1}).x() - stepSize * grad_p / 1.0f;
+                float v       = mVelocity_v->getVertexDataAt({ i, j}).x() - stepSize * grad_p / 1.0f;
                 //printf("v: %f\n", v);
                 mVelocity_v->setVertexDataAt({ i, j }, v);
             }
@@ -489,9 +489,9 @@ namespace physsim
                 //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
-                float last_x = i - (last_x_velocity * stepSize) / mSpacing.x();          // ... set correct value
+                float last_x = i - (last_x_velocity * stepSize) / mSpacing.x();  // ... set correct value
                 //printf("last_x: %f\n", last_x);
-                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y();  // ... set correct value
                 //printf("last_y: %f\n", last_y);
 
                 // TODO: maybe with 2nd order Runge-Kutta
@@ -553,9 +553,9 @@ namespace physsim
                 //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
-                 float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
+                float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
                 //printf("last_x: %f\n", last_x);
-                float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                float last_y = j  - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
                 //printf("last_y: %f\n", last_y);
 
                 // TODO: maybe with 2nd order Runge-Kutta
@@ -621,13 +621,21 @@ namespace physsim
         {
             for (int i = 0; i < mResolution.x(); ++i)
             {
+                //printf("mSpacing_x: %f\n", mSpacing.x()); // 0.007812
+                //printf("mSpacing_y: %f\n", mSpacing.y()); // 0.007812
+                //printf("stepsize = %f\n", stepSize); // 0.063246 
+
                 // TODO: Compute the velocity
                 float last_x_velocity = 0.5f * (mVelocity_u->getVertexDataAt({ i, j }).x() + mVelocity_u->getVertexDataAt({ i + 1, j }).x()); // ... set correct value
                 float last_y_velocity = 0.5f * (mVelocity_v->getVertexDataAt({ i, j }).x() + mVelocity_v->getVertexDataAt({ i ,j + 1 }).x()); // ... set correct value
+                // printf("last_x_velocity: %f\n", last_x_velocity);
+                 //printf("last_y_velocity: %f\n", last_y_velocity);
 
                 // TODO: Find the last position of the particle (in grid coordinates) using an Euler step
                 float last_x = i - (last_x_velocity * stepSize) / mSpacing.x(); // ... set correct value
+                //printf("last_x: %f\n", last_x);
                 float last_y = j - (last_y_velocity * stepSize) / mSpacing.y(); // ... set correct value
+                //printf("last_y: %f\n", last_y);
                 
                 // TODO: maybe with 2nd order Runge-Kutta
 

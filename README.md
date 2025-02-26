@@ -1,9 +1,23 @@
 # Physically-based Simulation 2024 - Course Exercises
 
-![Feature image of Smoothed Particle Hydrodynamics implementation](images/sph.png)
+<!--![Feature image of Smoothed Particle Hydrodynamics implementation](images/sph.png)-->
+<!---->
+<!--![Feature image of trochoidal ocean wave](images/trochoidal.png)-->
+<!---->
+<!--![Iterative solver for grid-based smoke](images/smoke_closed_iterative.png)-->
+<!---->
+<!--![Linear solver for grid-based smoke](images/smoke_open_linear.png)-->
 
-![Feature image of trochoidal ocean wave](images/trochoidal.png)
-
+<p align="center">
+    <img src="images/smoke_closed_iterative.png" width=400><br/>
+    <i>Iterative solver for grid-based smoke</i><br/>
+    <img src="images/smoke_open_linear.png" width=400><br/>
+    <i>Linear solver for grid-based smoke</i><br/>
+    <img src="images/sph.png" width=800><br/>
+    <i>Feature image of Smoothed Particle Hydrodynamics implementation</i><br/>
+    <img src="images/trochoidal.png" width=800><br/>
+    <i>Feature image of trochoidal ocean wave</i><br/>
+</p>
 
 ## Installation
 
