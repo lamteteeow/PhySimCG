@@ -97,7 +97,6 @@ namespace physsim
 
         // TODO: get current linear and angular momentum of body
         Eigen::Vector3d p = body.linearMomentum();
-        Eigen::Vector3d l = body.angularMomentum();
 
         // TODO: get force and torque that are currently applied to body
         Eigen::Vector3d f = body.force();
@@ -134,7 +133,8 @@ namespace physsim
         Eigen::Vector3d wnew = q * wb1;
 
         // TODO: explicitly integrate the torque and update the body accordingly
-        Eigen::Vector3d lnew = l + stepSize * (t - wnew.cross(Ib * wnew));
+        //Eigen::Vector3d lnew = l + stepSize * (t - wnew.cross(Ib * wnew));
+        wnew += body.inertiaWorldInverse() * stepSize * t;
         body.setAngularVelocity(wnew);
 
         // TODO: update position of the body using the linear velocity and update body accordingly

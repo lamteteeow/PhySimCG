@@ -70,21 +70,21 @@ namespace physsim
             case EBroadPhaseMethod::SweepAndPrune:
             {
                 // TODO: compute bounding boxes and create intervals on the 3 main axes
-                //std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size()); // 5 boxes + 1 plane
-                ////printf("%d\n", mObjects.size());
-                //std::vector<std::pair<size_t, size_t>> x_interval;
-                //std::vector<std::pair<size_t, size_t>> y_interval;
-                //std::vector<std::pair<size_t, size_t>> z_interval;
-                //for (size_t i = 0; i < aabbs.size(); i++)
-                //{
-                //    aabbs[i] = mObjects[i]->shape()->worldBounds();
-                //    //printf("%d\n", aabbs);
-                //    x_interval.push_back({ aabbs[i].min()[0], aabbs[i].max()[0] });
-                //    //printf("%d\n", aabbs[i].min()[0]);
-                //    //printf("%d\n", aabbs[i].max()[0]);
-                //    y_interval.push_back({ aabbs[i].min()[1], aabbs[i].max()[1] });
-                //    z_interval.push_back({ aabbs[i].min()[2], aabbs[i].max()[2] });
-                //}
+                std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size()); // 5 boxes + 1 plane
+                //printf("%d\n", mObjects.size());
+                std::vector<std::pair<size_t, size_t>> x_interval;
+                std::vector<std::pair<size_t, size_t>> y_interval;
+                std::vector<std::pair<size_t, size_t>> z_interval;
+                for (size_t i = 0; i < aabbs.size(); i++)
+                {
+                    aabbs[i] = mObjects[i]->shape()->worldBounds();
+                    //printf("%d\n", aabbs);
+                    x_interval.push_back({ aabbs[i].min()[0], aabbs[i].max()[0] });
+                    //printf("%d\n", aabbs[i].min()[0]);
+                    //printf("%d\n", aabbs[i].max()[0]);
+                    y_interval.push_back({ aabbs[i].min()[1], aabbs[i].max()[1] });
+                    z_interval.push_back({ aabbs[i].min()[2], aabbs[i].max()[2] });
+                }
 
                  // Compute AABBs for all objects
                 std::vector<Eigen::AlignedBox3d> aabbs(mObjects.size());
@@ -507,13 +507,13 @@ namespace physsim
             double j_mag = (-(1 + eps) * vrel) / (ima + imb + (iia * ra.cross(contact.n)).cross(ra).dot(contact.n) + (iib * rb.cross(contact.n)).cross(rb).dot(contact.n));
 
             // TODO: apply impulse forces to the bodies at the contact point
-            Eigen::Vector3d force = j_mag * contact.n;
-            //Eigen::Vector3d force = j_mag * contact.n * stepSize;
+            //Eigen::Vector3d force = j_mag * contact.n;
+            Eigen::Vector3d force = j_mag * contact.n / stepSize;
 
-            contact.a->applyForce(force, contact.p);
-            contact.b->applyForce(-force, contact.p);
-            contact.a->applyTorque(ra.cross(force));
-            contact.b->applyTorque(-ra.cross(force));
+            contact.a->applyForce(-force, contact.p);
+            contact.b->applyForce(force, contact.p);
+            //contact.a->applyTorque(ra.cross(force));
+            //contact.b->applyTorque(-ra.cross(force));
         }
     }
 

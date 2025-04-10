@@ -311,18 +311,19 @@ namespace physsim
                     {
                         float b = mDivergence->getVertexDataAt({ i, j }).x() / stepSize * rho; // right-hand
                         // TODO: update the pressure values
-                        float p_center = mPressure->getVertexDataAt({ i, j }).x();
+                        //float p_center = mPressure->getVertexDataAt({ i, j }).x();
                         float sum      = 0.0f;
 
                         // Gauss-Seidel implementation
+                        // to be checked
                         // West neighbor
-                        sum += (i > 0) ? mPressure->getVertexDataAt({ i - 1, j }).x() : p_center;
+                        sum += (i > 0) ? mPressure->getVertexDataAt({ i - 1, j }).x() : 0;
                         // South neighbor
-                        sum += (j > 0) ? mPressure->getVertexDataAt({ i, j - 1 }).x() : p_center;
+                        sum += (j > 0) ? mPressure->getVertexDataAt({ i, j - 1 }).x() : 0;
                         // East neighbor
-                        sum += (i < mResolution.x() - 1) ? mPressure->getVertexDataAt({ i + 1, j }).x() : p_center;
+                        sum += (i < mResolution.x() - 1) ? mPressure->getVertexDataAt({ i + 1, j }).x() : 0;
                         // North neighbor
-                        sum += (j < mResolution.y() - 1) ? mPressure->getVertexDataAt({ i, j + 1 }).x() : p_center;
+                        sum += (j < mResolution.y() - 1) ? mPressure->getVertexDataAt({ i, j + 1 }).x() : 0;
 
                         float p_new = (sum - dx2 * b) / 4.0f;
                         mPressure->setVertexDataAt({ i, j }, p_new);

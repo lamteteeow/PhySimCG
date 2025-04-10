@@ -166,17 +166,20 @@ namespace physsim
                 double w            = exp(alpha * mTime) * (c1 * (alpha * cos(beta * mTime) - beta * sin(beta * mTime)) + c2 * (alpha * sin(beta * mTime) + beta * cos(beta * mTime)));
                 mSpring.endPosition = mSpring.startPosition + Eigen::Vector3d(0, 0, z);
                 mSpring.endVelocity = Eigen::Vector3d(0, 0, w);
+                break;
             }
 
             case EMethod::ExplicitEuler:
                 // TODO: explicit euler
-                mSpring.endVelocity += mStepSize * a;   
-                mSpring.endPosition += mStepSize * v;
+                mSpring.endPosition = x + mStepSize * v;
+                mSpring.endVelocity = v + mStepSize * a;
+                break;
 
             case EMethod::SymplecticEuler:
                 // TODO: symplectic euler
                 mSpring.endVelocity += mStepSize * a;
                 mSpring.endPosition += mStepSize * mSpring.endVelocity;
+                break;
 
             case EMethod::ExplicitRK2:
             {
@@ -188,6 +191,7 @@ namespace physsim
                 mSpring.endVelocity += mStepSize / 2 * a;
                 mSpring.endPosition += mStepSize * mSpring.endVelocity;
                 mSpring.endVelocity += mStepSize / 2 * a;
+                break;
             }
 
             case EMethod::ImplicitEuler:
@@ -196,6 +200,7 @@ namespace physsim
                 double w = (m * v[2] - mStepSize * k * x[2] + mStepSize * mGravity[2] * m - mStepSize * L * k) / (k * pow(mStepSize, 2) + gamma * mStepSize + m);
                 mSpring.endVelocity = Eigen::Vector3d(0, 0, w);
                 mSpring.endPosition += mStepSize * mSpring.endVelocity;
+                break;
             }
             }
 
